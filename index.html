@@ -191,7 +191,7 @@ tr:hover td{background:rgba(34,211,238,.04)}
 <!-- CHARTS -->
 <div class="g2">
   <div class="card" style="padding:12px"><div class="st">📊 Thực hiện & Giải ngân · Theo tháng (T1–T5)</div><div style="height:260px;position:relative"><canvas id="cM"></canvas></div></div>
-  <div class="card" style="padding:12px"><div class="st">📈 Thực hiện & Giải ngân lũy kế hết tháng 5</div><div style="height:260px;position:relative"><canvas id="cQ"></canvas></div></div>
+  <div class="card" style="padding:12px"><div class="st">📈 Thực hiện & Giải ngân Lũy kế</div><div style="height:260px;position:relative"><canvas id="cQ"></canvas></div></div>
 </div>
 <div class="g3">
   <div class="card" style="padding:12px"><div class="st">🔵 Quốc lộ</div><div class="donut-wrap"><canvas id="dQL"></canvas><div class="dc-lbl"><div class="n" id="cQL">—</div><div class="l">công trình</div></div></div></div>
@@ -297,20 +297,25 @@ async function fetchData(){
 }
 
 /* ======= PARSE GVIZ JSON ======= */
+function norm(s){return (s||'').toString().trim().replace(/\s+/g,' ');}
 function parseGviz(json){
-  const cols = json.table.cols.map(c=>c.label||c.id);
+  const cols = json.table.cols.map(c=>norm(c.label||c.id));
   const cm = CFG.colMap||{};
-  // Build reverse map: colKey → column index
   const idx={};
   COL_KEYS.forEach(k=>{
-    const target = cm[k]||k;
-    const i = cols.findIndex(c=>c.trim()===target.trim());
+    const target = norm(cm[k]||k);
+    const i = cols.findIndex(c=>c===target);
     idx[k] = i;
   });
   return (json.table.rows||[]).map(row=>{
-    const g=(k,def)=>{const i=idx[k];return (i>=0&&row.c[i]&&row.c[i].v!=null)?String(row.c[i].v):(def||'');};
+    const g=(k,def)=>{const i=idx[k];return (i>=0&&row.c[i]&&row.c[i].v!=null)?norm(String(row.c[i].v)):(def||'');};
     const n=(k)=>{const v=g(k,'0');return parseFloat(v.replace(/,/g,'.'))||0;};
-    return {id:g('id'),name:g('name'),tuyen:g('tuyen'),tc:g('tc'),ctr:g('ctr'),kc:g('kc'),ht:g('ht'),
+    // Normalize tuyen and tc to canonical values
+    const rawTuyen=g('tuyen');
+    const rawTc=g('tc');
+    const tuyen=rawTuyen.toLowerCase().includes('qu')&&rawTuyen.toLowerCase().includes('c')?'Quốc lộ':rawTuyen.toLowerCase().includes('t')&&rawTuyen.toLowerCase().includes('nh')?'Tỉnh lộ':rawTuyen;
+    const tc=rawTc.toLowerCase().includes('chuy')?'Chuyển tiếp':rawTc.toLowerCase().includes('kh')?'Khởi công mới':rawTc;
+    return {id:g('id'),name:g('name'),tuyen,tc,ctr:g('ctr'),kc:g('kc'),ht:g('ht'),
       tmdt:n('tmdt'),hdXL:n('hdXL'),kv:n('kv'),kxl:n('kxl'),lkt:n('lkt'),lkg:n('lkg'),dc:n('dc'),st:g('st'),
       t1t:n('t1t'),t1g:n('t1g'),t2t:n('t2t'),t2g:n('t2g'),t3t:n('t3t'),t3g:n('t3g'),
       t4t:n('t4t'),t4g:n('t4g'),t5t:n('t5t'),t5g:n('t5g'),
@@ -351,7 +356,9 @@ function go(){
     const nm=n==='ALL'||(n==='__e__'&&!d.ctr)||n===d.ctr;
     const sm=st==='ALL'||(st==='cham'&&(d.st||'').includes('Chậm'))||(st==='ok'&&((d.st||'').includes('Hoàn thành')||(d.st||'').includes('Đảm bảo')))||(st==='chuathi'&&!d.st);
     const pm=pid==='ALL'||d.id===pid||d.name===pid;
-    return (t==='ALL'||d.tuyen===t)&&(tc==='ALL'||d.tc===tc)&&nm&&pm&&sm;
+    const tm=t==='ALL'||d.tuyen===t;
+    const tcm=tc==='ALL'||d.tc===tc;
+    return tm&&tcm&&nm&&pm&&sm;
   });
   renderAll();
 }
@@ -419,15 +426,21 @@ function renderAll(){
     {l:'Thực hiện lũy kế (tỷ đồng)',d:[+(sTH/1000).toFixed(2)],bg:'rgba(96,165,250,0.7)',bc:'#60a5fa'},
     {l:'Giải ngân lũy kế (tỷ đồng)',d:[+(sGN/1000).toFixed(2)],bg:'rgba(74,222,128,0.75)',bc:'#4ade80'}
   ];
-  mkBar('cQ',['Lũy kế đến hết tháng 5'],barSetsQ);
+  mkBar('cQ',['Giá trị lũy kế'],barSetsQ);
   ['QL','TL'].forEach(type=>{
     const tuyen=type==='QL'?'Quốc lộ':'Tỉnh lộ';
     const ct=f.filter(d=>d.tuyen===tuyen&&d.tc==='Chuyển tiếp');
     const moi=f.filter(d=>d.tuyen===tuyen&&d.tc==='Khởi công mới');
-    document.getElementById('c'+type).textContent=ct.length+moi.length||'0';
+    const total=ct.length+moi.length;
+    document.getElementById('c'+type).textContent=total>0?total:'—';
     const cGN=+(ct.reduce((s,d)=>s+d.lkg,0)/1000).toFixed(2);
     const mGN=+(moi.reduce((s,d)=>s+d.lkg,0)/1000).toFixed(2);
-    mkDonut('d'+type,[`Chuyển tiếp (${ct.length} CT)`,`Khởi công mới (${moi.length} CT)`],[ct.length,moi.length],['#22d3ee','#f59e0b'],{_gn:[cGN,mGN],_c:[ct.length,moi.length]},false);
+    const hasData=total>0;
+    const donutData=hasData?[ct.length,moi.length]:[1,0];
+    const donutLabels=hasData?[`Chuyển tiếp (${ct.length} CT)`,`Khởi công mới (${moi.length} CT)`]:['Chưa có dữ liệu'];
+    const donutCols=hasData?['#22d3ee','#f59e0b']:['#1a3a45'];
+    const extraDs=hasData?{_gn:[cGN,mGN],_c:[ct.length||null,moi.length||null]}:{};
+    mkDonut('d'+type,donutLabels,donutData,donutCols,hasData?extraDs:null,false);
   });
   const cMap={};f.forEach(d=>{if(d.ctr)cMap[d.ctr]=(cMap[d.ctr]||0)+d.kv;});
   mkDonut('dCtr',Object.keys(cMap),Object.values(cMap).map(v=>+(v/1000).toFixed(2)),CC8.slice(0,Object.keys(cMap).length),null,false);
