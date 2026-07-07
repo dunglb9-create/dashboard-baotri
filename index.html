@@ -301,6 +301,34 @@ async function fetchData(){
 
 /* ======= PARSE GVIZ JSON ======= */
 function norm(s){return (s||'').toString().trim().replace(/\s+/g,' ');}
+
+// Chuyển giá trị gviz thành chuỗi dd/mm/yyyy
+function gvizToDate(cell){
+  if(!cell||cell.v==null) return '';
+  // Nếu có formatted value (f) và trông giống ngày → dùng luôn
+  if(cell.f){
+    const f=cell.f.trim();
+    // Đã đúng dạng dd/mm/yyyy hoặc d/m/yyyy
+    if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(f)) return f;
+    // Dạng mm/dd/yyyy (kiểu Mỹ) → đảo lại
+    if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(f)){
+      const p=f.split('/');return p[1]+'/'+p[0]+'/'+p[2];
+    }
+  }
+  // .v dạng "Date(yyyy,m,d)" — tháng bắt đầu từ 0
+  const v=String(cell.v);
+  const dm=v.match(/Date\((\d+),(\d+),(\d+)\)/);
+  if(dm){
+    const y=dm[1],m=parseInt(dm[2])+1,d=dm[3];
+    return d+'/'+m+'/'+y;
+  }
+  // .v là chuỗi ngày tháng dạng yyyy-mm-dd
+  const iso=v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso) return iso[3]+'/'+iso[2]+'/'+iso[1];
+  // Fallback: trả về nguyên bản
+  return norm(v);
+}
+
 function parseGviz(json){
   const cols = json.table.cols.map(c=>norm(c.label||c.id));
   const cm = CFG.colMap||{};
@@ -311,14 +339,17 @@ function parseGviz(json){
     idx[k] = i;
   });
   return (json.table.rows||[]).map(row=>{
-    const g=(k,def)=>{const i=idx[k];return (i>=0&&row.c[i]&&row.c[i].v!=null)?norm(String(row.c[i].v)):(def||'');};
+    const cell=(k)=>{const i=idx[k];return (i>=0&&row.c[i])?row.c[i]:null;};
+    const g=(k,def)=>{const c=cell(k);return c&&c.v!=null?norm(String(c.v)):(def||'');};
+    const gDate=(k)=>gvizToDate(cell(k));
     const n=(k)=>{const v=g(k,'0');return parseFloat(v.replace(/,/g,'.'))||0;};
-    // Normalize tuyen and tc to canonical values
     const rawTuyen=g('tuyen');
     const rawTc=g('tc');
     const tuyen=rawTuyen.toLowerCase().includes('qu')&&rawTuyen.toLowerCase().includes('c')?'Quốc lộ':rawTuyen.toLowerCase().includes('t')&&rawTuyen.toLowerCase().includes('nh')?'Tỉnh lộ':rawTuyen;
     const tc=rawTc.toLowerCase().includes('chuy')?'Chuyển tiếp':rawTc.toLowerCase().includes('kh')?'Khởi công mới':rawTc;
-    return {id:g('id'),name:g('name'),tuyen,tc,ctr:g('ctr'),kc:g('kc'),ht:g('ht'),
+    return {id:g('id'),name:g('name'),tuyen,tc,ctr:g('ctr'),
+      kc:gDate('kc'),  // dùng gvizToDate thay vì g()
+      ht:gDate('ht'),  // dùng gvizToDate thay vì g()
       tmdt:n('tmdt'),hdXL:n('hdXL'),kv:n('kv'),kxl:n('kxl'),lkt:n('lkt'),lkg:n('lkg'),dc:n('dc'),st:g('st'),
       t1t:n('t1t'),t1g:n('t1g'),t2t:n('t2t'),t2g:n('t2g'),t3t:n('t3t'),t3g:n('t3g'),
       t4t:n('t4t'),t4g:n('t4g'),t5t:n('t5t'),t5g:n('t5g'),t6t:n('t6t'),t6g:n('t6g'),
