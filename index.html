@@ -180,7 +180,7 @@ tr:hover td{background:rgba(34,211,238,.04)}
   <div><label class="lbl">Tính chất</label><select id="fC" onchange="go()"><option value="ALL">Tất cả</option><option value="Chuyển tiếp">Chuyển tiếp</option><option value="Khởi công mới">Khởi công mới</option></select></div>
   <div><label class="lbl">Đơn vị thi công</label><select id="fN" onchange="go()"><option value="ALL">Tất cả nhà thầu</option></select></div>
   <div><label class="lbl">Tên công trình</label><select id="fP" onchange="go()"><option value="ALL">Tất cả công trình</option></select></div>
-  <div><label class="lbl">Trạng thái</label><select id="fS" onchange="go()"><option value="ALL">Tất cả</option><option value="cham">Chậm tiến độ</option><option value="ok">Hoàn thành/Đảm bảo</option><option value="chuathi">Chưa thi công</option></select></div>
+  <div><label class="lbl">Trạng thái</label><select id="fS" onchange="go()"><option value="ALL">Tất cả</option><option value="cham">Chậm tiến độ</option><option value="ok">Hoàn thành/Đảm bảo</option><option value="chuathi">Mới khởi công</option></select></div>
 </div></div>
 
 <!-- KPIs -->
@@ -399,7 +399,7 @@ function startAutoRefresh(){
 function rebuildFilters(){
   ['fN','fP'].forEach(id=>{const s=document.getElementById(id);while(s.options.length>1)s.remove(1);});
   [...new Set(DATA.map(d=>d.ctr||'__e__'))].forEach(c=>{
-    const o=document.createElement('option');o.value=c;o.textContent=c==='__e__'?'Chưa thi công':c;
+    const o=document.createElement('option');o.value=c;o.textContent=c==='__e__'?'Mới khởi công':c;
     document.getElementById('fN').appendChild(o);
   });
   DATA.forEach(d=>{const o=document.createElement('option');o.value=d.id||d.name;o.textContent=(d.name||'').substring(0,55)+'…';document.getElementById('fP').appendChild(o);});
@@ -426,7 +426,7 @@ function buildTimeline(kc,ht,status){
   const isDang=sl.includes('đảm bảo')||sl.includes('đang');
   const kcd=parseDate(kc),htd=parseDate(ht);
   // Nếu không có status nhưng đã có ngày KC/HT (do override) → vẫn render timeline
-  if(!status && (!kcd||!htd)) return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Chưa thi công</div></div>';
+  if(!status && (!kcd||!htd)) return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Mới khởi công</div></div>';
   const bc=isCham?'#f87171':'#4ade80';
   if(isDone&&kcd&&htd)return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:100%;background:${bc}"></div></div><div class="tl-info" style="color:${bc}">✓ Hoàn thành</div></div>`;
   if(kcd&&htd){
@@ -436,7 +436,7 @@ function buildTimeline(kc,ht,status){
     const remColor=rem<=30?'#f87171':rem<=90?'#fbbf24':'#4ade80';
     return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:${pct.toFixed(0)}%;background:${bc}"></div></div><div class="tl-info" style="color:${remColor}">⏱ ${rem} ngày còn lại</div></div>`;
   }
-  return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Chưa thi công</div></div>';
+  return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Mới khởi công</div></div>';
 }
 
 /* ======= CHART PLUGINS ======= */
@@ -511,10 +511,10 @@ function renderAll(){
   document.getElementById('tb').innerHTML=f.map((d,i)=>{
     const pr=d.kxl>0?Math.min(d.lkg/d.kxl*100,100):0;
     const bc=pr<30?'#ef4444':pr<70?'#fbbf24':'#4ade80';
-    const st=d.st||'Chưa thi công';
+    const st=d.st||'Mới khởi công';
     const dv=Number(d.dc);
     const dh=dv>0?`<span class="dc-box dp">+${dv.toFixed(1)}%</span>`:dv<0?`<span class="dc-box dn">${dv.toFixed(1)}%</span>`:`<span class="dc-box dz">0%</span>`;
-    return `<tr><td style="color:var(--t3);font-weight:700;padding-top:9px">${i+1}</td><td class="nc">${d.name}</td><td style="padding-top:8px"><span class="badge ${d.tuyen==='Quốc lộ'?'bg-b':'bg-a'}">${d.tuyen}</span></td><td style="padding-top:8px"><span class="badge ${d.tc==='Chuyển tiếp'?'bg-a':'bg-g'}">${d.tc}</span></td><td style="padding-top:8px;min-width:100px;max-width:145px;word-break:break-word;font-size:10px">${d.ctr||'Chưa thi công'}</td><td class="tl-cell">${buildTimeline(d.kc,d.ht,d.st)}</td><td style="text-align:right;color:var(--pu);padding-top:8px">${TyF(d.tmdt)}</td><td style="text-align:right;color:var(--or);padding-top:8px">${TyF(d.hdXL)}</td><td style="text-align:right;color:var(--cy);padding-top:8px">${TyF(d.kv)}</td><td style="text-align:right;color:var(--bl);padding-top:8px">${TyF(d.kxl)}</td><td style="text-align:right;color:#93c5fd;padding-top:8px">${TyF(d.lkt)}</td><td style="text-align:right;color:var(--gn);padding-top:8px">${TyF(d.lkg)}</td><td style="padding-top:8px"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><div class="bt"><div class="bf" style="width:${pr.toFixed(0)}%;background:${bc}"></div></div><span style="font-size:9px;font-weight:800;min-width:24px;text-align:right;color:${bc}">${pr.toFixed(0)}%</span></div></td><td style="text-align:center;padding-top:8px">${dh}</td><td style="text-align:center;padding-top:8px"><span class="badge ${SC(st)}">${st}</span></td></tr>`;
+    return `<tr><td style="color:var(--t3);font-weight:700;padding-top:9px">${i+1}</td><td class="nc">${d.name}</td><td style="padding-top:8px"><span class="badge ${d.tuyen==='Quốc lộ'?'bg-b':'bg-a'}">${d.tuyen}</span></td><td style="padding-top:8px"><span class="badge ${d.tc==='Chuyển tiếp'?'bg-a':'bg-g'}">${d.tc}</span></td><td style="padding-top:8px;min-width:100px;max-width:145px;word-break:break-word;font-size:10px">${d.ctr||'Mới khởi công'}</td><td class="tl-cell">${buildTimeline(d.kc,d.ht,d.st)}</td><td style="text-align:right;color:var(--pu);padding-top:8px">${TyF(d.tmdt)}</td><td style="text-align:right;color:var(--or);padding-top:8px">${TyF(d.hdXL)}</td><td style="text-align:right;color:var(--cy);padding-top:8px">${TyF(d.kv)}</td><td style="text-align:right;color:var(--bl);padding-top:8px">${TyF(d.kxl)}</td><td style="text-align:right;color:#93c5fd;padding-top:8px">${TyF(d.lkt)}</td><td style="text-align:right;color:var(--gn);padding-top:8px">${TyF(d.lkg)}</td><td style="padding-top:8px"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><div class="bt"><div class="bf" style="width:${pr.toFixed(0)}%;background:${bc}"></div></div><span style="font-size:9px;font-weight:800;min-width:24px;text-align:right;color:${bc}">${pr.toFixed(0)}%</span></div></td><td style="text-align:center;padding-top:8px">${dh}</td><td style="text-align:center;padding-top:8px"><span class="badge ${SC(st)}">${st}</span></td></tr>`;
   }).join('');
 }
 
