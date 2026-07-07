@@ -233,7 +233,7 @@ tr:hover td{background:rgba(34,211,238,.04)}
 <script>
 /* ======= STATE ======= */
 let CFG = null, DATA = [], filtered = [], charts = {}, refreshTimer = null, countdown = 300;
-const TODAY = new Date(2026,5,1);
+const TODAY = new Date(); // Ngày thực tế hôm nay
 const CC8 = ['#06b6d4','#3b82f6','#10b981','#f59e0b','#ef4444','#a78bfa','#f472b6','#84cc16'];
 const COL_KEYS = ['id','name','tuyen','tc','ctr','kc','ht','tmdt','hdXL','kv','kxl','lkt','lkg','dc','st','t1t','t1g','t2t','t2g','t3t','t3g','t4t','t4g','t5t','t5g','t6t','t6g','kh1','kh2','kh3','kh4','kh5','kh6','khlk'];
 
@@ -269,6 +269,26 @@ function saveConfig(){
   fetchData();
 }
 
+/* ======= OVERRIDE ngày KC/HT theo STT (index bắt đầu từ 0) ======= */
+function applyOverrides(data){
+  // Mỗi entry: [index_0_based, 'kc dd/mm/yyyy', 'ht dd/mm/yyyy']
+  // STT 7→index 6, STT 8→7, STT 9→8, STT 10→9, STT 11→10, STT 15→14
+  const overrides = [
+    [6,  '5/7/2026',  '1/3/2027'],
+    [7,  '6/7/2026',  '6/10/2027'],
+    [8,  '10/7/2026', '10/10/2027'],
+    [9,  '8/7/2026',  '8/10/2027'],
+    [10, '25/6/2026', '25/12/2026'],
+    [14, '8/7/2026',  '8/1/2028'],
+  ];
+  overrides.forEach(([idx, kc, ht])=>{
+    if(data[idx]){
+      data[idx].kc = kc;
+      data[idx].ht = ht;
+    }
+  });
+}
+
 /* ======= FETCH via gviz (no CORS issue) ======= */
 async function fetchData(){
   if(!CFG||!CFG.sheetId){return;}
@@ -284,6 +304,7 @@ async function fetchData(){
     const jsonStr = text.replace(/^[^(]*\(/, '').replace(/\);?\s*$/, '');
     const json = JSON.parse(jsonStr);
     DATA = parseGviz(json);
+    applyOverrides(DATA); // Patch ngày KC/HT cho các công trình cần thiết
     filtered = [...DATA];
     rebuildFilters();
     renderAll();
