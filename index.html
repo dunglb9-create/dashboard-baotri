@@ -283,7 +283,8 @@ function applyOverrides(data){
     if(data[idx]){
       data[idx].kc = kc;
       data[idx].ht = ht;
-      if(!data[idx].st || data[idx].st==='') data[idx].st = st;
+      // Chỉ gán status mặc định nếu chưa có; không ghi đè dữ liệu từ Google Sheet
+      if(!data[idx].st || data[idx].st.trim()==='') data[idx].st = st;
     }
   });
 }
@@ -421,17 +422,21 @@ function go(){
 function buildTimeline(kc,ht,status){
   const sl=(status||'').toLowerCase();
   const isDone=sl.includes('hoàn thành')||sl.includes('đưa vào sử dụng');
-  const isCham=sl.includes('chậm'),isDang=sl.includes('đảm bảo')||sl.includes('đang');
-  if(!status)return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Chưa thi công</div></div>';
-  const kcd=parseDate(kc),htd=parseDate(ht),bc=isCham?'#f87171':'#4ade80';
+  const isCham=sl.includes('chậm');
+  const isDang=sl.includes('đảm bảo')||sl.includes('đang');
+  const kcd=parseDate(kc),htd=parseDate(ht);
+  // Nếu không có status nhưng đã có ngày KC/HT (do override) → vẫn render timeline
+  if(!status && (!kcd||!htd)) return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Chưa thi công</div></div>';
+  const bc=isCham?'#f87171':'#4ade80';
   if(isDone&&kcd&&htd)return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:100%;background:${bc}"></div></div><div class="tl-info" style="color:${bc}">✓ Hoàn thành</div></div>`;
-  if((isDang||isCham)&&kcd&&htd){
+  if(kcd&&htd){
     const total=daysBetween(kcd,htd),elapsed=Math.max(daysBetween(kcd,TODAY),0),rem=Math.max(daysBetween(TODAY,htd),0);
     const pct=total>0?Math.min(elapsed/total*100,100):0;
     if(rem<=0)return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:100%;background:${bc}"></div></div><div class="tl-info" style="color:${bc}">✓ Hoàn thành</div></div>`;
-    return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:${pct.toFixed(0)}%;background:${bc}"></div></div><div class="tl-info" style="color:${bc}">${rem} ngày còn lại</div></div>`;
+    const remColor=rem<=30?'#f87171':rem<=90?'#fbbf24':'#4ade80';
+    return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:${pct.toFixed(0)}%;background:${bc}"></div></div><div class="tl-info" style="color:${remColor}">⏱ ${rem} ngày còn lại</div></div>`;
   }
-  return '<div class="tl-wrap" style="align-items:center"><span style="color:var(--t3)">—</span></div>';
+  return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Chưa thi công</div></div>';
 }
 
 /* ======= CHART PLUGINS ======= */
