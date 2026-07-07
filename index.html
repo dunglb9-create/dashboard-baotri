@@ -271,20 +271,19 @@ function saveConfig(){
 
 /* ======= OVERRIDE ngày KC/HT theo STT (index bắt đầu từ 0) ======= */
 function applyOverrides(data){
-  // Mỗi entry: [index_0_based, 'kc dd/mm/yyyy', 'ht dd/mm/yyyy']
-  // STT 7→index 6, STT 8→7, STT 9→8, STT 10→9, STT 11→10, STT 15→14
   const overrides = [
-    [6,  '5/7/2026',  '1/3/2027'],
-    [7,  '6/7/2026',  '6/10/2027'],
-    [8,  '10/7/2026', '10/10/2027'],
-    [9,  '8/7/2026',  '8/10/2027'],
-    [10, '25/6/2026', '25/12/2026'],
-    [14, '8/7/2026',  '8/1/2028'],
+    [6,  '5/7/2026',  '1/3/2027',   'Đảm bảo tiến độ/Đang thi công'],
+    [7,  '6/7/2026',  '6/10/2027',  'Đảm bảo tiến độ/Đang thi công'],
+    [8,  '10/7/2026', '10/10/2027', 'Đảm bảo tiến độ/Đang thi công'],
+    [9,  '8/7/2026',  '8/10/2027',  'Đảm bảo tiến độ/Đang thi công'],
+    [10, '25/6/2026', '25/12/2026', 'Đảm bảo tiến độ/Đang thi công'],
+    [14, '8/7/2026',  '8/1/2028',   'Đảm bảo tiến độ/Đang thi công'],
   ];
-  overrides.forEach(([idx, kc, ht])=>{
+  overrides.forEach(([idx, kc, ht, st])=>{
     if(data[idx]){
       data[idx].kc = kc;
       data[idx].ht = ht;
+      if(!data[idx].st || data[idx].st==='') data[idx].st = st;
     }
   });
 }
