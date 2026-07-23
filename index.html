@@ -419,24 +419,27 @@ function go(){
 }
 
 /* ======= TIMELINE ======= */
-function buildTimeline(kc,ht,status){
+function buildTimeline(kc,ht,status,lkt,hdXL){
   const sl=(status||'').toLowerCase();
   const isDone=sl.includes('hoàn thành')||sl.includes('đưa vào sử dụng');
   const isCham=sl.includes('chậm');
   const isDang=sl.includes('đảm bảo')||sl.includes('đang');
   const kcd=parseDate(kc),htd=parseDate(ht);
+  const lktV=Number(lkt)||0,hdXLV=Number(hdXL)||0;
+  const gnPct=hdXLV>0?Math.min(lktV/hdXLV*100,100):0;
+  const gnBar=hdXLV>0?`<div class="tl-bar-bg" style="margin-top:3px"><div class="tl-bar-fill" style="width:${gnPct.toFixed(0)}%;background:#fb923c"></div></div><div class="tl-info" style="color:#fb923c">🟧 TH LK/HĐ XL: ${gnPct.toFixed(0)}% (${TyF(lktV)}/${TyF(hdXLV)} tỷ)</div>`:'';
   // Nếu không có status nhưng đã có ngày KC/HT (do override) → vẫn render timeline
-  if(!status && (!kcd||!htd)) return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Mới khởi công</div></div>';
+  if(!status && (!kcd||!htd)) return `<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Mới khởi công</div>${gnBar}</div>`;
   const bc=isCham?'#f87171':'#4ade80';
-  if(isDone&&kcd&&htd)return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:100%;background:${bc}"></div></div><div class="tl-info" style="color:${bc}">✓ Hoàn thành</div></div>`;
+  if(isDone&&kcd&&htd)return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:100%;background:${bc}"></div></div><div class="tl-info" style="color:${bc}">✓ Hoàn thành</div>${gnBar}</div>`;
   if(kcd&&htd){
     const total=daysBetween(kcd,htd),elapsed=Math.max(daysBetween(kcd,TODAY),0),rem=Math.max(daysBetween(TODAY,htd),0);
     const pct=total>0?Math.min(elapsed/total*100,100):0;
-    if(rem<=0)return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:100%;background:${bc}"></div></div><div class="tl-info" style="color:${bc}">✓ Hoàn thành</div></div>`;
+    if(rem<=0)return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:100%;background:${bc}"></div></div><div class="tl-info" style="color:${bc}">✓ Hoàn thành</div>${gnBar}</div>`;
     const remColor=rem<=30?'#f87171':rem<=90?'#fbbf24':'#4ade80';
-    return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:${pct.toFixed(0)}%;background:${bc}"></div></div><div class="tl-info" style="color:${remColor}">⏱ ${rem} ngày còn lại</div></div>`;
+    return `<div class="tl-wrap"><div class="tl-dates"><span style="color:#93c5fd">KC: ${fmtD(kc)}</span><span style="color:#fbbf24">HT: ${fmtD(ht)}</span></div><div class="tl-bar-bg"><div class="tl-bar-fill" style="width:${pct.toFixed(0)}%;background:${bc}"></div></div><div class="tl-info" style="color:${remColor}">⏱ ${rem} ngày còn lại</div>${gnBar}</div>`;
   }
-  return '<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Mới khởi công</div></div>';
+  return `<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Mới khởi công</div>${gnBar}</div>`;
 }
 
 /* ======= CHART PLUGINS ======= */
@@ -514,7 +517,7 @@ function renderAll(){
     const st=d.st||'Mới khởi công';
     const dv=Number(d.dc);
     const dh=dv>0?`<span class="dc-box dp">+${dv.toFixed(1)}%</span>`:dv<0?`<span class="dc-box dn">${dv.toFixed(1)}%</span>`:`<span class="dc-box dz">0%</span>`;
-    return `<tr><td style="color:var(--t3);font-weight:700;padding-top:9px">${i+1}</td><td class="nc">${d.name}</td><td style="padding-top:8px"><span class="badge ${d.tuyen==='Quốc lộ'?'bg-b':'bg-a'}">${d.tuyen}</span></td><td style="padding-top:8px"><span class="badge ${d.tc==='Chuyển tiếp'?'bg-a':'bg-g'}">${d.tc}</span></td><td style="padding-top:8px;min-width:100px;max-width:145px;word-break:break-word;font-size:10px">${d.ctr||'Mới khởi công'}</td><td class="tl-cell">${buildTimeline(d.kc,d.ht,d.st)}</td><td style="text-align:right;color:var(--pu);padding-top:8px">${TyF(d.tmdt)}</td><td style="text-align:right;color:var(--or);padding-top:8px">${TyF(d.hdXL)}</td><td style="text-align:right;color:var(--cy);padding-top:8px">${TyF(d.kv)}</td><td style="text-align:right;color:var(--bl);padding-top:8px">${TyF(d.kxl)}</td><td style="text-align:right;color:#93c5fd;padding-top:8px">${TyF(d.lkt)}</td><td style="text-align:right;color:var(--gn);padding-top:8px">${TyF(d.lkg)}</td><td style="padding-top:8px"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><div class="bt"><div class="bf" style="width:${pr.toFixed(0)}%;background:${bc}"></div></div><span style="font-size:9px;font-weight:800;min-width:24px;text-align:right;color:${bc}">${pr.toFixed(0)}%</span></div></td><td style="text-align:center;padding-top:8px">${dh}</td><td style="text-align:center;padding-top:8px"><span class="badge ${SC(st)}">${st}</span></td></tr>`;
+    return `<tr><td style="color:var(--t3);font-weight:700;padding-top:9px">${i+1}</td><td class="nc">${d.name}</td><td style="padding-top:8px"><span class="badge ${d.tuyen==='Quốc lộ'?'bg-b':'bg-a'}">${d.tuyen}</span></td><td style="padding-top:8px"><span class="badge ${d.tc==='Chuyển tiếp'?'bg-a':'bg-g'}">${d.tc}</span></td><td style="padding-top:8px;min-width:100px;max-width:145px;word-break:break-word;font-size:10px">${d.ctr||'Mới khởi công'}</td><td class="tl-cell">${buildTimeline(d.kc,d.ht,d.st,d.lkt,d.hdXL)}</td><td style="text-align:right;color:var(--pu);padding-top:8px">${TyF(d.tmdt)}</td><td style="text-align:right;color:var(--or);padding-top:8px">${TyF(d.hdXL)}</td><td style="text-align:right;color:var(--cy);padding-top:8px">${TyF(d.kv)}</td><td style="text-align:right;color:var(--bl);padding-top:8px">${TyF(d.kxl)}</td><td style="text-align:right;color:#93c5fd;padding-top:8px">${TyF(d.lkt)}</td><td style="text-align:right;color:var(--gn);padding-top:8px">${TyF(d.lkg)}</td><td style="padding-top:8px"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><div class="bt"><div class="bf" style="width:${pr.toFixed(0)}%;background:${bc}"></div></div><span style="font-size:9px;font-weight:800;min-width:24px;text-align:right;color:${bc}">${pr.toFixed(0)}%</span></div></td><td style="text-align:center;padding-top:8px">${dh}</td><td style="text-align:center;padding-top:8px"><span class="badge ${SC(st)}">${st}</span></td></tr>`;
   }).join('');
 }
 
