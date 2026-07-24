@@ -510,7 +510,8 @@ function renderAll(){
   const tMap={},tcMap={};
   f.forEach(d=>{tMap[d.tuyen]=(tMap[d.tuyen]||0)+d.kv;tcMap[d.tc]=(tcMap[d.tc]||0)+d.kv;});
   mkDonut('dTuyen',Object.keys(tMap),Object.values(tMap).map(v=>+(v/1000).toFixed(2)),['#38bdf8','#34d399'],null,true);
-  mkDonut('dTC',Object.keys(tcMap),Object.values(tcMap).map(v=>+(v/1000).toFixed(2)),['#22d3ee','#f59e0b'],null,true);
+  const tcColorMap={'Chuyển tiếp':'#22d3ee','Khởi công mới':'#f59e0b','Sửa chữa đột xuất':'#4ade80'};
+  mkDonut('dTC',Object.keys(tcMap),Object.values(tcMap).map(v=>+(v/1000).toFixed(2)),Object.keys(tcMap).map((k,i)=>tcColorMap[k]||CC8[i%CC8.length]),null,true);
 
   document.getElementById('tb').innerHTML=f.map((d,i)=>{
     const pr=d.kxl>0?Math.min(d.lkg/d.kxl*100,100):0;
