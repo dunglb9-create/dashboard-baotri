@@ -427,7 +427,8 @@ function buildTimeline(kc,ht,status,lkt,hdXL){
   const kcd=parseDate(kc),htd=parseDate(ht);
   const lktV=Number(lkt)||0,hdXLV=Number(hdXL)||0;
   const gnPct=hdXLV>0?Math.min(lktV/hdXLV*100,100):0;
-  const gnBar=hdXLV>0?`<div class="tl-bar-bg" style="margin-top:3px"><div class="tl-bar-fill" style="width:${gnPct.toFixed(0)}%;background:#fb923c"></div></div><div class="tl-info" style="color:#fb923c">🟧 TH LK/HĐ XL: ${gnPct.toFixed(0)}% (${TyF(lktV)}/${TyF(hdXLV)} tỷ)</div>`:'';
+  const gnBarWidth=isDone?100:gnPct;
+  const gnBar=hdXLV>0?`<div class="tl-bar-bg" style="margin-top:3px"><div class="tl-bar-fill" style="width:${gnBarWidth.toFixed(0)}%;background:#fb923c"></div></div><div class="tl-info" style="color:#fb923c">🟧 TH LK/HĐ XL: ${gnPct.toFixed(0)}% (${TyF(lktV)}/${TyF(hdXLV)} tỷ)</div>`:'';
   // Nếu không có status nhưng đã có ngày KC/HT (do override) → vẫn render timeline
   if(!status && (!kcd||!htd)) return `<div class="tl-wrap" style="align-items:center"><div class="tl-chuathi">⏸ Mới khởi công</div>${gnBar}</div>`;
   const bc=isCham?'#f87171':'#4ade80';
