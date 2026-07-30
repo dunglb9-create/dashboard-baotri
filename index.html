@@ -376,21 +376,23 @@ function parseGviz(json){
       t4t:n('t4t'),t4g:n('t4g'),t5t:n('t5t'),t5g:n('t5g'),t6t:n('t6t'),t6g:n('t6g'),
       kh1:n('kh1'),kh2:n('kh2'),kh3:n('kh3'),kh4:n('kh4'),kh5:n('kh5'),kh6:n('kh6'),khlk:n('khlk')};
   });
-  // Gộp các dòng tách theo nhà thầu (không có Tên công trình) vào công trình chính liền trước,
+  // Gộp các dòng tách theo nhà thầu (liên danh) vào công trình chính liền trước,
   // thay vì đếm mỗi dòng là 1 công trình riêng biệt.
+  // Nhận diện: dòng "chính" luôn có TMĐT > 0 (mỗi công trình chỉ có 1 TMĐT duy nhất);
+  // dòng "chi tiết nhà thầu" có TMĐT = 0 dù cột Tên công trình có bị điền nhầm tên nhà thầu vào hay không.
   const result=[];
   let current=null;
   raw.forEach(r=>{
     const isEmptyRow = !r.id && !r.name && !r.ctr && !r.tmdt && !r.hdXL && !r.kv && !r.kxl && !r.lkt && !r.lkg;
-    if(r.name){ // Dòng công trình chính: bắt buộc phải có Tên công trình
+    if(isEmptyRow) return; // Dòng trống hoàn toàn → bỏ qua
+    if(r.tmdt>0 || !current){ // Dòng công trình chính: có TMĐT riêng (hoặc chưa có công trình cha nào trước đó)
       r.breakdown=[];
       result.push(r);
       current=r;
-    }else if(!isEmptyRow && current){
-      // Dòng chi tiết theo nhà thầu (liên danh) → gắn vào công trình chính, không tính là công trình mới
-      current.breakdown.push({ctr:r.ctr,hdXL:r.hdXL,kv:r.kv,kxl:r.kxl,lkt:r.lkt,lkg:r.lkg});
+    }else{
+      // Dòng chi tiết theo nhà thầu (TMĐT=0) → gắn vào công trình chính, không tính là công trình mới
+      current.breakdown.push({ctr:r.ctr||r.name,hdXL:r.hdXL,kv:r.kv,kxl:r.kxl,lkt:r.lkt,lkg:r.lkg});
     }
-    // Dòng trống hoàn toàn → bỏ qua
   });
   return result;
 }
@@ -541,7 +543,7 @@ function renderAll(){
       const bhdXL=Number(b.hdXL)||0,bkv=Number(b.kv)||0,bkxl=Number(b.kxl)||0,blkt=Number(b.lkt)||0,blkg=Number(b.lkg)||0;
       const bpr=bkxl>0?Math.min(blkg/bkxl*100,100):0;
       const bbc=bpr<30?'#ef4444':bpr<70?'#fbbf24':'#4ade80';
-      return `<tr style="background:rgba(255,255,255,.02)"><td style="color:var(--t3);font-weight:700;padding-top:8px;font-size:10px">${i+1}.${j+1}</td><td class="nc" style="font-size:11px;color:var(--t2);font-style:italic">↳ Chi tiết nhà thầu: ${b.ctr||'—'}</td><td></td><td></td><td style="padding-top:8px;min-width:100px;max-width:145px;word-break:break-word;font-size:10px;color:var(--t3)">—</td><td class="tl-cell">${bhdXL>0?`<div class="tl-bar-bg"><div class="tl-bar-fill" style="width:${(bhdXL>0?Math.min(blkt/bhdXL*100,100):0).toFixed(0)}%;background:#fb923c"></div></div><div class="tl-info" style="color:#fb923c">🟧 ${(bhdXL>0?Math.min(blkt/bhdXL*100,100):0).toFixed(0)}% (${TyF(blkt)}/${TyF(bhdXL)} tỷ)</div>`:'<span style="color:var(--t3);font-size:10px">—</span>'}</td><td style="text-align:right;color:var(--t3);padding-top:8px">—</td><td style="text-align:right;color:var(--or);padding-top:8px;font-size:11px">${TyF(bhdXL)}</td><td style="text-align:right;color:var(--cy);padding-top:8px;font-size:11px">${TyF(bkv)}</td><td style="text-align:right;color:var(--bl);padding-top:8px;font-size:11px">${TyF(bkxl)}</td><td style="text-align:right;color:#93c5fd;padding-top:8px;font-size:11px">${TyF(blkt)}</td><td style="text-align:right;color:var(--gn);padding-top:8px;font-size:11px">${TyF(blkg)}</td><td style="padding-top:8px">${bkxl>0?`<div style="display:flex;align-items:center;gap:4px;margin-top:3px"><div class="bt"><div class="bf" style="width:${bpr.toFixed(0)}%;background:${bbc}"></div></div><span style="font-size:9px;font-weight:800;min-width:24px;text-align:right;color:${bbc}">${bpr.toFixed(0)}%</span></div>`:'<span style="color:var(--t3);font-size:10px">—</span>'}</td><td style="text-align:center;padding-top:8px;color:var(--t3)">—</td><td style="text-align:center;padding-top:8px"><span class="badge" style="background:rgba(148,163,184,.15);color:var(--t3)">Chi tiết</span></td></tr>`;
+      return `<tr style="background:rgba(255,255,255,.02)"><td style="color:var(--t3);font-weight:700;padding-top:8px;font-size:10px">${i+1}.${j+1}</td><td class="nc" style="font-size:11px;color:var(--t2);font-style:italic">↳ Chi tiết nhà thầu: ${b.ctr||'—'}</td><td></td><td></td><td style="padding-top:8px;min-width:100px;max-width:145px;word-break:break-word;font-size:10px;color:var(--t3)">—</td><td class="tl-cell">${bhdXL>0?`<div class="tl-bar-bg"><div class="tl-bar-fill" style="width:${(bhdXL>0?Math.min(blkt/bhdXL*100,100):0).toFixed(0)}%;background:#fb923c"></div></div><div class="tl-info" style="color:#fb923c">🟧 ${(bhdXL>0?Math.min(blkt/bhdXL*100,100):0).toFixed(0)}% (${TyF(blkt)}/${TyF(bhdXL)} tỷ)</div>`:'<span style="color:var(--t3);font-size:10px">—</span>'}</td><td style="text-align:right;color:var(--t3);padding-top:8px">—</td><td style="text-align:right;color:var(--or);padding-top:8px;font-size:11px">${TyF(bhdXL)}</td><td style="text-align:right;color:var(--cy);padding-top:8px;font-size:11px">${TyF(bkv)}</td><td style="text-align:right;color:var(--bl);padding-top:8px;font-size:11px">${TyF(bkxl)}</td><td style="text-align:right;color:#93c5fd;padding-top:8px;font-size:11px">${TyF(blkt)}</td><td style="text-align:right;color:var(--gn);padding-top:8px;font-size:11px">${TyF(blkg)}</td><td style="padding-top:8px">${bkxl>0?`<div style="display:flex;align-items:center;gap:4px;margin-top:3px"><div class="bt"><div class="bf" style="width:${bpr.toFixed(0)}%;background:${bbc}"></div></div><span style="font-size:9px;font-weight:800;min-width:24px;text-align:right;color:${bbc}">${bpr.toFixed(0)}%</span></div>`:'<span style="color:var(--t3);font-size:10px">—</span>'}</td><td style="text-align:center;padding-top:8px;color:var(--t3)">—</td><td style="text-align:center;padding-top:8px"></td></tr>`;
     }).join(''):'';
     return mainRow+subRows;
   }).join('');
