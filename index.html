@@ -359,7 +359,7 @@ function parseGviz(json){
     const i = cols.findIndex(c=>c===target);
     idx[k] = i;
   });
-  return (json.table.rows||[]).map(row=>{
+  const raw = (json.table.rows||[]).map(row=>{
     const cell=(k)=>{const i=idx[k];return (i>=0&&row.c[i])?row.c[i]:null;};
     const g=(k,def)=>{const c=cell(k);return c&&c.v!=null?norm(String(c.v)):(def||'');};
     const gDate=(k)=>gvizToDate(cell(k));
@@ -375,7 +375,24 @@ function parseGviz(json){
       t1t:n('t1t'),t1g:n('t1g'),t2t:n('t2t'),t2g:n('t2g'),t3t:n('t3t'),t3g:n('t3g'),
       t4t:n('t4t'),t4g:n('t4g'),t5t:n('t5t'),t5g:n('t5g'),t6t:n('t6t'),t6g:n('t6g'),
       kh1:n('kh1'),kh2:n('kh2'),kh3:n('kh3'),kh4:n('kh4'),kh5:n('kh5'),kh6:n('kh6'),khlk:n('khlk')};
-  }).filter(r=>r.id||r.name);
+  });
+  // Gộp các dòng tách theo nhà thầu (không có Tên công trình) vào công trình chính liền trước,
+  // thay vì đếm mỗi dòng là 1 công trình riêng biệt.
+  const result=[];
+  let current=null;
+  raw.forEach(r=>{
+    const isEmptyRow = !r.id && !r.name && !r.ctr && !r.tmdt && !r.hdXL && !r.kv && !r.kxl && !r.lkt && !r.lkg;
+    if(r.name){ // Dòng công trình chính: bắt buộc phải có Tên công trình
+      r.breakdown=[];
+      result.push(r);
+      current=r;
+    }else if(!isEmptyRow && current){
+      // Dòng chi tiết theo nhà thầu (liên danh) → gắn vào công trình chính, không tính là công trình mới
+      current.breakdown.push({ctr:r.ctr,hdXL:r.hdXL,kv:r.kv,kxl:r.kxl,lkt:r.lkt,lkg:r.lkg});
+    }
+    // Dòng trống hoàn toàn → bỏ qua
+  });
+  return result;
 }
 
 function setStatus(type,msg){
@@ -519,7 +536,7 @@ function renderAll(){
     const st=d.st||'Mới khởi công';
     const dv=Number(d.dc);
     const dh=dv>0?`<span class="dc-box dp">+${dv.toFixed(1)}%</span>`:dv<0?`<span class="dc-box dn">${dv.toFixed(1)}%</span>`:`<span class="dc-box dz">0%</span>`;
-    return `<tr><td style="color:var(--t3);font-weight:700;padding-top:9px">${i+1}</td><td class="nc">${d.name}</td><td style="padding-top:8px"><span class="badge ${d.tuyen==='Quốc lộ'?'bg-b':'bg-a'}">${d.tuyen}</span></td><td style="padding-top:8px"><span class="badge ${d.tc==='Chuyển tiếp'?'bg-a':'bg-g'}">${d.tc}</span></td><td style="padding-top:8px;min-width:100px;max-width:145px;word-break:break-word;font-size:10px">${d.ctr||'Mới khởi công'}</td><td class="tl-cell">${buildTimeline(d.kc,d.ht,d.st,d.lkt,d.hdXL)}</td><td style="text-align:right;color:var(--pu);padding-top:8px">${TyF(d.tmdt)}</td><td style="text-align:right;color:var(--or);padding-top:8px">${TyF(d.hdXL)}</td><td style="text-align:right;color:var(--cy);padding-top:8px">${TyF(d.kv)}</td><td style="text-align:right;color:var(--bl);padding-top:8px">${TyF(d.kxl)}</td><td style="text-align:right;color:#93c5fd;padding-top:8px">${TyF(d.lkt)}</td><td style="text-align:right;color:var(--gn);padding-top:8px">${TyF(d.lkg)}</td><td style="padding-top:8px"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><div class="bt"><div class="bf" style="width:${pr.toFixed(0)}%;background:${bc}"></div></div><span style="font-size:9px;font-weight:800;min-width:24px;text-align:right;color:${bc}">${pr.toFixed(0)}%</span></div></td><td style="text-align:center;padding-top:8px">${dh}</td><td style="text-align:center;padding-top:8px"><span class="badge ${SC(st)}">${st}</span></td></tr>`;
+    return `<tr><td style="color:var(--t3);font-weight:700;padding-top:9px">${i+1}</td><td class="nc">${d.name}</td><td style="padding-top:8px"><span class="badge ${d.tuyen==='Quốc lộ'?'bg-b':'bg-a'}">${d.tuyen}</span></td><td style="padding-top:8px"><span class="badge ${d.tc==='Chuyển tiếp'?'bg-a':'bg-g'}">${d.tc}</span></td><td style="padding-top:8px;min-width:100px;max-width:145px;word-break:break-word;font-size:10px">${d.ctr||'Mới khởi công'}${(d.breakdown&&d.breakdown.length)?`<div style="margin-top:4px;padding-top:4px;border-top:1px dashed var(--bd);font-size:9px;color:var(--t3);line-height:1.6">`+d.breakdown.map(b=>`▸ ${b.ctr||'—'}: <b style="color:var(--or)">${TyF(b.hdXL)}</b> tỷ`).join('<br>')+`</div>`:''}</td><td class="tl-cell">${buildTimeline(d.kc,d.ht,d.st,d.lkt,d.hdXL)}</td><td style="text-align:right;color:var(--pu);padding-top:8px">${TyF(d.tmdt)}</td><td style="text-align:right;color:var(--or);padding-top:8px">${TyF(d.hdXL)}</td><td style="text-align:right;color:var(--cy);padding-top:8px">${TyF(d.kv)}</td><td style="text-align:right;color:var(--bl);padding-top:8px">${TyF(d.kxl)}</td><td style="text-align:right;color:#93c5fd;padding-top:8px">${TyF(d.lkt)}</td><td style="text-align:right;color:var(--gn);padding-top:8px">${TyF(d.lkg)}</td><td style="padding-top:8px"><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><div class="bt"><div class="bf" style="width:${pr.toFixed(0)}%;background:${bc}"></div></div><span style="font-size:9px;font-weight:800;min-width:24px;text-align:right;color:${bc}">${pr.toFixed(0)}%</span></div></td><td style="text-align:center;padding-top:8px">${dh}</td><td style="text-align:center;padding-top:8px"><span class="badge ${SC(st)}">${st}</span></td></tr>`;
   }).join('');
 }
 
